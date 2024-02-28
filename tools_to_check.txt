@@ -1,0 +1,5 @@
+https://github.com/denisidoro/navi
+https://github.com/BurntSushi/ripgrep
+https://github.com/wting/autojump
+fuzzy finders
+
