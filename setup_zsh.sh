@@ -1,7 +1,7 @@
 #!/bin/bash
 
 sudo apt update
-sudo apt install git curl wget unzip locales ffmpeg libsm6 libxext6 python3-dev python3-pip python3-setuptools -y
+sudo apt install -y git curl wget unzip locales ffmpeg libsm6 libxext6 python3-dev python3-pip python3-setuptools
 locale-gen en_US.UTF-8
 
 sudo apt install -y zsh
@@ -15,14 +15,14 @@ git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $HOME/.oh-my-
 git clone https://github.com/zdharma-continuum/fast-syntax-highlighting.git $HOME/.oh-my-zsh/custom/plugins/fast-syntax-highlighting
 git clone https://github.com/so-fancy/diff-so-fancy.git $HOME/.oh-my-zsh/custom/plugins/diff-so-fancy
 
-sudo apt install bat
+sudo apt install -y bat
 mkdir -p ~/.local/bin
 ln -s /usr/bin/batcat ~/.local/bin/bat
 
 pip3 install thefuck --user
 
-sed -i '1s|^|export PATH="$HOME/.local/bin/:$PATH:$HOME/.oh-my-zsh/custom/plugins/diff-so-fancy"\n|' ~/.zshrc
 sed -i '1s/^/eval $(thefuck --alias)\n /' ~/.zshrc
+sed -i '1s|^|export PATH="$HOME/.local/bin/:$PATH:libsm6$HOME/.oh-my-zsh/custom/plugins/diff-so-fancy"\n|' ~/.zshrc
 
 git config --global core.pager "diff-so-fancy | less --tabs=4 -RF"
 git config --global interactive.diffFilter "diff-so-fancy --patch"
