@@ -53,6 +53,13 @@ echo 'alias dircount="find . -type f | wc -l"' >> ~/.zshrc # Add folder count al
 echo 'alias filecount="ls | wc -l"' >> ~/.zshrc # Add file count alias
 echo 'alias cat="batcat --paging=never -p"' >> ~/.zshrc
 
+# Enable automatic tmux on ssh
+CONFIG='if [[ $- =~ i ]] && [[ -z "$TMUX" ]] && [[ -n "$SSH_TTY" ]]; then
+  tmux attach-session -t ssh_tmux || tmux new-session -s ssh_tmux
+fi'
+echo "" >> ~/.zshrc
+echo "$CONFIG" >> ~/.zshrc
+
 chsh -s $(which zsh)
 
 if [[ "$1" == "dbz" ]]; then
