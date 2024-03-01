@@ -22,7 +22,7 @@ ln -s /usr/bin/batcat ~/.local/bin/bat
 pip3 install thefuck --user
 
 sed -i '1s/^/eval $(thefuck --alias)\n /' ~/.zshrc
-sed -i '1s|^|export PATH="$HOME/.local/bin/:$PATH:libsm6$HOME/.oh-my-zsh/custom/plugins/diff-so-fancy"\n|' ~/.zshrc
+sed -i '1s|^|export PATH="$HOME/.local/bin/:$PATH:$HOME/.oh-my-zsh/custom/plugins/diff-so-fancy"\n|' ~/.zshrc
 
 git config --global core.pager "diff-so-fancy | less --tabs=4 -RF"
 git config --global interactive.diffFilter "diff-so-fancy --patch"
