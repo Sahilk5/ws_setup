@@ -25,7 +25,6 @@ fi
 
 # --- 2. Check/Install Apps, Fonts, and Tools via Homebrew ---
 echo "Checking Homebrew packages..."
-brew tap homebrew/cask-fonts
 
 casks_to_install=(
   "iterm2"
@@ -33,7 +32,7 @@ casks_to_install=(
 )
 formulas_to_install=(
   "bat"
-  "eza" # <-- This is the fix
+  "eza" # <-- FIX: Renamed from 'exa'
   "fzf"
   "btop"
   "neovim"
@@ -259,7 +258,6 @@ EOF
 fi
 
 # --- 11. NEW: Install Neovim plugins automatically ---
-# This runs nvim in the background, executes PlugInstall, and quits.
 if [ -f "$NVIM_CONFIG_FILE" ]; then
     echo "Installing/Updating Neovim plugins..."
     nvim --headless +PlugInstall +qall
