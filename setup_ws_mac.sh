@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 echo "🚀 Starting your full 'tany' workspace upgrade..."
-echo "This will configure iTerm2, Zsh, tmux, Neovim (aliased to 'vim'), and VS Code."
+echo "This will configure iTerm2, Zsh (with history-autocomplete and syntax highlighting), tmux, Neovim, and VS Code."
 echo "You may be prompted for your password."
 
 # --- 1. Check/Install Homebrew ---
@@ -41,7 +41,7 @@ formulas_to_install=(
   "fd"
   "lazygit"
   "jq"        # For VS Code config
-  "tmux"      # <-- ADDED TMUX
+  "tmux"
 )
 
 for cask in "${casks_to_install[@]}"; do
@@ -106,6 +106,46 @@ if ! grep -q 'alias vim="nvim"' ~/.zshrc; then
 else
   echo "✅ 'alias vim=\"nvim\"' already exists in ~/.zshrc. Skipping."
 fi
+
+# --- 6b. NEW: Install and activate Zsh plugins (Autosuggestions & Syntax Highlighting) ---
+echo "Checking Zsh plugins..."
+
+AUTOSUGGEST_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions"
+SYNTAX_HIGHLIGHT_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting"
+
+# Install zsh-autosuggestions
+if [ ! -d "$AUTOSUGGEST_DIR" ]; then
+  echo "Cloning zsh-autosuggestions..."
+  git clone https://github.com/zsh-users/zsh-autosuggestions "$AUTOSUGGEST_DIR"
+else
+  echo "✅ zsh-autosuggestions already installed."
+fi
+
+# Install zsh-syntax-highlighting
+if [ ! -d "$SYNTAX_HIGHLIGHT_DIR" ]; then
+  echo "Cloning zsh-syntax-highlighting..."
+  git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$SYNTAX_HIGHLIGHT_DIR"
+else
+  echo "✅ zsh-syntax-highlighting already installed."
+fi
+
+# Activate plugins in .zshrc if not already active
+if ! grep -q "plugins=.*zsh-autosuggestions" ~/.zshrc; then
+  echo "Activating zsh-autosuggestions in ~/.zshrc..."
+  # This command adds 'zsh-autosuggestions' to the plugins(...) list, just before the closing ')'
+  sed -i.bak 's/plugins=(\(.*\))/plugins=(\1 zsh-autosuggestions)/' ~/.zshrc
+else
+  echo "✅ zsh-autosuggestions already active in ~/.zshrc."
+fi
+
+if ! grep -q "plugins=.*zsh-syntax-highlighting" ~/.zshrc; then
+  echo "Activating zsh-syntax-highlighting in ~/.zshrc..."
+  # This command adds 'zsh-syntax-highlighting' to the plugins(...) list, just before the closing ')'
+  sed -i.bak 's/plugins=(\(.*\))/plugins=(\1 zsh-syntax-highlighting)/' ~/.zshrc
+else
+  echo "✅ zsh-syntax-highlighting already active in ~/.zshrc."
+fi
+
 
 # --- 7. AUTOMATION: Create default .p10k.zsh to skip wizard ---
 P10K_CONFIG_FILE="$HOME/.p10k.zsh"
@@ -173,7 +213,6 @@ typeset -g POWERLEVEL9K_OS_ICON_FOREGROUND=232
 typeset -g POWERLEVEL9K_OS_ICON_BACKGROUND=7
 typeset -g POWERLEVEL9K_TIME_FOREGROUND=254
 typeset -g POWERLEVEL9K_TIME_BACKGROUND=238
-typesType
 typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FOREGROUND=254
 typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_BACKGROUND=238
 typeset -g POWERLEVEL9K_STATUS_ERROR_FOREGROUND=1
@@ -280,7 +319,7 @@ else
     echo "Skipping plugin install as $NVIM_CONFIG_FILE was not created by this script."
 fi
 
-# --- 12. NEW: Create default tmux config ---
+# --- 12. Create default tmux config ---
 TMUX_CONFIG_FILE="$HOME/.tmux.conf"
 if [ -f "$TMUX_CONFIG_FILE" ]; then
   echo "✅ $TMUX_CONFIG_FILE already exists. Skipping."
@@ -292,7 +331,7 @@ else
 # Enable mouse mode (modern tmux)
 set -g mouse on
 
-# Set default shell to zsh (to load p10k)
+# Set default shell to zsh (to load p10k and plugins)
 set -g default-shell /bin/zsh
 
 # Enable 256-color support for themes
@@ -360,16 +399,15 @@ fi
 echo ""
 echo "🎉 --- FULL WORKSPACE AUTOMATION COMPLETE! --- 🎉"
 echo ""
-echo "Your iTerm, Zsh, tmux, and Neovim (aliased to 'vim') are now upgraded."
+echo "Your iTerm, Zsh (with autocomplete), tmux, and Neovim (aliased to 'vim') are now upgraded."
 echo ""
 echo "There is ONLY ONE final manual step:"
 echo ""
 echo "1. Quit and Relaunch iTerm2."
 echo "2. Go to Settings (Press 'Cmd + ,')."
-Do
 echo "3. Go to the 'Profiles' tab."
 echo "4. You will see a new profile named 'tany'."
 echo "5. Click 'tany', then click 'Other Actions...' at the bottom."
 echo "6. Select 'Set as Default'."
 echo ""
-echo "All new windows will now use the correct font and theme!"
+echo "All new windows will now use the correct font, theme, and plugins!"
