@@ -1,6 +1,8 @@
 #!/bin/zsh
 
-echo "🚀 Starting your terminal upgrade with checks..."
+echo "🚀 Starting your full 'tany' workspace upgrade..."
+echo "This will configure iTerm2, Zsh, and Neovim."
+echo "You will be prompted to optionally configure VS Code."
 echo "You may be prompted for your password."
 
 # --- 1. Check/Install Homebrew ---
@@ -32,13 +34,14 @@ casks_to_install=(
 )
 formulas_to_install=(
   "bat"
-  "eza" # <-- FIX: Renamed from 'exa'
+  "eza"       # The new 'exa'
   "fzf"
   "btop"
   "neovim"
   "ripgrep"
   "fd"
   "lazygit"
+  "jq"        # For VS Code config
 )
 
 for cask in "${casks_to_install[@]}"; do
@@ -156,13 +159,14 @@ typeset -g POWERLEVEL9K_TIME_FORMAT='%D{%H:%M:%S}'
 typeset -g POWERLEVEL9K_STATUS_OK_IN_NON_VERBOSE=true
 typeset -g POWERLEVEL9K_STATUS_OK=false
 typeset -g POWERLEVEL9K_STATUS_CROSS=true
+typesType
 typeset -g POWERLEVEL9K_OS_ICON_FOREGROUND=232
 typeset -g POWERLEVEL9K_OS_ICON_BACKGROUND=7
 typeset -g POWERLEVEL9K_TIME_FOREGROUND=254
 typeset -g POWERLEVEL9K_TIME_BACKGROUND=238
 typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FOREGROUND=254
 typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_BACKGROUND=238
-typeset -g POWERLEVEL9K_STATUS_ERROR_FOREGROUND=1
+typeset -g POWERLEVEL9K_STATUS_ERROR_FOREGROUND=1Z
 typeset -g POWERLEVEL9K_STATUS_ERROR_BACKGROUND=15
 typeset -g POWERLEVEL9K_STATUS_OK_FOREGROUND=2
 typeset -g POWERLEVEL9K_STATUS_OK_BACKGROUND=15
@@ -198,7 +202,7 @@ else
 EOF
 fi
 
-# --- 9. NEW: Install vim-plug (Plugin Manager for Neovim) ---
+# --- 9. Install vim-plug (Plugin Manager for Neovim) ---
 PLUG_VIM_FILE="$HOME/.local/share/nvim/site/autoload/plug.vim"
 if [ -f "$PLUG_VIM_FILE" ]; then
   echo "✅ vim-plug is already installed. Skipping."
@@ -208,7 +212,7 @@ else
     https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 fi
 
-# --- 10. NEW: Create starter Neovim config (init.vim) ---
+# --- 10. Create starter Neovim config (init.vim) ---
 NVIM_CONFIG_DIR="$HOME/.config/nvim"
 NVIM_CONFIG_FILE="$NVIM_CONFIG_DIR/init.vim"
 
@@ -257,7 +261,7 @@ nnoremap <leader>t :TagbarToggle<CR>
 EOF
 fi
 
-# --- 11. NEW: Install Neovim plugins automatically ---
+# --- 11. Install Neovim plugins automatically ---
 if [ -f "$NVIM_CONFIG_FILE" ]; then
     echo "Installing/Updating Neovim plugins..."
     nvim --headless +PlugInstall +qall
@@ -266,10 +270,49 @@ else
     echo "Skipping plugin install as $NVIM_CONFIG_FILE was not created by this script."
 fi
 
+# --- 12. OPTIONAL: Configure VS Code Integrated Terminal ---
+echo "" # Add a blank line for readability
+read -q "response?Do you want to automatically configure the VS Code integrated terminal? (y/n) "
+echo "" # Add a newline after the user presses a key
+
+if [[ "$response" == "y" || "$response" == "Y" ]]; then
+    VSCODE_SETTINGS_FILE="$HOME/Library/Application Support/Code/User/settings.json"
+
+    # Check if VS Code settings directory exists
+    if [ -d "$HOME/Library/Application Support/Code/User" ]; then
+        echo "Configuring VS Code Integrated Terminal..."
+        
+        # Ensure settings.json exists and is valid
+        if [ ! -f "$VSCODE_SETTINGS_FILE" ]; then
+            echo "{}" > "$VSCODE_SETTINGS_FILE"
+        elif [ ! -s "$VSCODE_SETTINGS_FILE" ]; then
+            # if file is empty, initialize it
+            echo "{}" > "$VSCODE_SETTINGS_FILE"
+        fi
+        
+        # Use jq to update settings
+        TEMP_JSON=$(mktemp)
+        # Check if jq successfully read and processed the file before overwriting
+        if jq \
+          '.["terminal.integrated.fontFamily"] = "HackNerdFont-Regular" | .["terminal.integrated.defaultProfile.osx"] = "zsh"' \
+          "$VSCODE_SETTINGS_FILE" > "$TEMP_JSON"; then
+            mv "$TEMP_JSON" "$VSCODE_SETTINGS_FILE"
+            echo "✅ VS Code terminal font and profile are set."
+        else
+            echo "⚠️  Error: Could not read or parse $VSCODE_SETTINGS_FILE. Skipping VS Code config."
+            rm -f "$TEMP_JSON"
+        fi
+    else
+        echo "✅ VS Code user settings directory not found. Skipping VS Code config."
+    fi
+else
+    echo "Skipping VS Code configuration."
+fi
+
 echo ""
-echo "🎉 --- AUTOMATION COMPLETE! --- 🎉"
+echo "🎉 --- FULL WORKSPACE AUTOMATION COMPLETE! --- 🎉"
 echo ""
-echo "Your terminal is now fully upgraded. Neovim is configured and its plugins are installed."
+echo "Your iTerm, Zsh, and Neovim are now upgraded."
 echo ""
 echo "There is ONLY ONE final manual step:"
 echo ""
@@ -280,4 +323,4 @@ echo "4. You will see a new profile named 'tany'."
 echo "5. Click 'tany', then click 'Other Actions...' at the bottom."
 echo "6. Select 'Set as Default'."
 echo ""
-echo "All new windows will now use the correct font and theme automatically!"
+echo "All new windows will now use the correct font and theme!"
