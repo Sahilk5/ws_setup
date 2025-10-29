@@ -1,0 +1,213 @@
+#!/bin/zsh
+
+# =========================
+# tany workspace manager (v1.3 FINAL)
+# Main wrapper script
+# =========================
+
+# Strict mode
+set -e -u -o pipefail
+
+SCRIPT_DIR="${0:A:h}" # Get script's own directory
+
+# Source helper library (once, allow output)
+if [[ ! -f "$SCRIPT_DIR/lib_tany.sh" ]]; then
+  echo "❌ Error: Helper library lib_tany.sh not found in $SCRIPT_DIR"
+  exit 1
+fi
+source "$SCRIPT_DIR/lib_tany.sh"
+
+# --- Constants ---
+SCRIPTS=(
+  "setup_ws_mac.zsh"
+  "uninstall_ws_mac.zsh"
+  "apps.zsh"
+  "uninstall-apps.zsh"
+  "macos-defaults.zsh"
+  "undo-macos-defaults.zsh"
+  "dev-languages.zsh"
+  "security.zsh"
+  "vscode-extensions.zsh"
+)
+MODULES=(base apps defaults languages security vscode all)
+
+# --- Argument Parsing ---
+COMMAND=""
+MODULE=""
+DRY_RUN=0
+ARGS=() # passthrough args to sub-scripts
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    install|uninstall|help)
+      COMMAND="$1"; shift ;;
+    --dry-run)
+      DRY_RUN=1; ARGS+=("--dry-run"); shift ;;
+    *)
+      if [[ -z "$MODULE" ]]; then
+        # Validate module
+        found=0
+        for m in "${MODULES[@]}"; do
+          if [[ "$1" == "$m" ]]; then found=1; MODULE="$1"; break; fi
+        done
+        # Allow special shortcuts even if not in MODULES list
+        if [[ "$1" == "security" ]]; then
+           found=1; MODULE="$1"
+        fi
+
+        if [[ $found -eq 0 ]]; then
+          err "Unknown module: $1"
+          err "Valid modules are: ${MODULES[*]}"
+          exit 1
+        fi
+      else
+        ARGS+=("$1") # Pass through any remaining args
+      fi
+      shift ;;
+  esac
+done
+
+ZSH_BIN="${ZSH_BIN:-$(command -v zsh || true)}"
+[[ -n "$ZSH_BIN" && -x "$ZSH_BIN" ]] || ZSH_BIN="/bin/zsh"
+if [[ ! -x "$ZSH_BIN" ]]; then
+  err "Unable to locate an executable 'zsh'. Set ZSH_BIN to override."
+  exit 1
+fi
+
+# --- Help ---
+print_main_help() {
+  echo ""
+  log "🚀 tany Workspace Manager"
+  echo ""
+  echo "Usage:"
+  echo "  ./tany install <module> [--dry-run]"
+  echo "  ./tany uninstall <module> [--dry-run]"
+  echo "  ./tany help"
+  echo ""
+  echo "Shortcuts:"
+  echo "  ./tany security        # runs security.zsh (interactive)"
+  echo "Modules:"
+  echo "  base       Core terminal setup (zsh, nvim, tmux, utils)."
+  echo "  apps       GUI applications & cloud CLIs (Brewfile)."
+  echo "  defaults   Opinionated macOS system settings."
+  echo "  languages  Runtimes via asdf (node, python, etc.)."
+  echo "  security   Git identity, SSH keys, gh auth (interactive)."
+  echo "  vscode     VS Code extensions."
+  echo "  all        Install base, apps, defaults, languages, vscode."
+  echo ""
+  echo "Options:"
+  echo "  --dry-run  Show what commands would be run without executing them."
+  echo ""
+  echo "Examples:"
+  echo "  ./tany install base"
+  echo "  ./tany install all --dry-run"
+  echo "  ./tany uninstall apps"
+  echo "  ./tany security"
+  echo ""
+}
+
+# --- Shortcuts if no explicit command ---
+if [[ -z "$COMMAND" && -n "$MODULE" ]]; then
+  case "$MODULE" in
+    security)
+      # Run interactive script directly
+      log "Running security setup…"
+      # Use zsh to run, pass remaining args
+      # Use 'exec' to replace the current process - cleaner exit
+      exec "$ZSH_BIN" "$SCRIPT_DIR/security.zsh" "${ARGS[@]}"
+      ;;
+    *)
+      # Default to help if a non-special module given without a command
+      COMMAND="help"
+      ;;
+  esac
+fi
+
+# Default to help if no command at all
+[[ -z "$COMMAND" ]] && COMMAND="help"
+
+# --- Dispatch ---
+run_script() { # always run via zsh; avoids exec bit surprises
+  local path="$1"; shift
+  if [[ ! -f "$path" ]]; then
+    err "Missing script: $path"
+    exit 1
+  fi
+  # Execute using zsh, passing remaining arguments
+  "$ZSH_BIN" "$path" "$@"
+}
+
+
+case "$COMMAND" in
+  install)
+    if [[ -z "$MODULE" ]]; then
+      err "Install command requires a module (e.g., 'base', 'apps', 'all')."
+      print_main_help; exit 1
+    fi
+    case "$MODULE" in
+      all)
+        log "Installing all modules... (Will prompt for invasive changes)"
+        # [FIX] Removed 'export TANY_ASSUME_YES=1' to allow interactive prompts
+        
+        run_script "$SCRIPT_DIR/setup_ws_mac.zsh" "${ARGS[@]}"
+        run_script "$SCRIPT_DIR/apps.zsh" "${ARGS[@]}"
+        run_script "$SCRIPT_DIR/macos-defaults.zsh" "${ARGS[@]}"
+        run_script "$SCRIPT_DIR/dev-languages.zsh" "${ARGS[@]}"
+        run_script "$SCRIPT_DIR/vscode-extensions.zsh" "${ARGS[@]}"
+        
+        warn "---"
+        warn "SKIPPED: 'security' module. It is interactive and must be run manually."
+        warn "Run './tany security' to set up your Git identity and SSH keys."
+        warn "---"
+        log "Finished installing all modules."
+        ;;
+      base)       run_script "$SCRIPT_DIR/setup_ws_mac.zsh" "${ARGS[@]}" ;;
+      apps)       run_script "$SCRIPT_DIR/apps.zsh" "${ARGS[@]}" ;;
+      defaults)   run_script "$SCRIPT_DIR/macos-defaults.zsh" "${ARGS[@]}" ;;
+      languages)  run_script "$SCRIPT_DIR/dev-languages.zsh" "${ARGS[@]}" ;;
+      security)   run_script "$SCRIPT_DIR/security.zsh" "${ARGS[@]}" ;; # Still allow explicit install call
+      vscode)     run_script "$SCRIPT_DIR/vscode-extensions.zsh" "${ARGS[@]}" ;;
+      *) err "Unknown module for install: $MODULE"; exit 1 ;;
+    esac
+    ;;
+
+  uninstall)
+    if [[ -z "$MODULE" ]]; then
+      err "Uninstall command requires a module (e.g., 'base', 'apps', 'defaults', 'vscode')."
+      warn "'languages' and 'security' do not have uninstallers."
+      print_main_help; exit 1
+    fi
+    case "$MODULE" in
+      all)
+        log "Uninstalling all uninstallable modules... (Will prompt for confirmation)"
+        # [FIX] Removed 'export TANY_ASSUME_YES=1' to allow interactive prompts
+
+        run_script "$SCRIPT_DIR/uninstall_ws_mac.zsh" "${ARGS[@]}"
+        run_script "$SCRIPT_DIR/uninstall-apps.zsh" "${ARGS[@]}"
+        run_script "$SCRIPT_DIR/undo-macos-defaults.zsh" "${ARGS[@]}"
+        run_script "$SCRIPT_DIR/vscode-extensions.zsh" --undo "${ARGS[@]}"
+        
+        warn "'languages' and 'security' modules do not have uninstallers."
+        log "Finished uninstalling modules."
+        ;;
+      base)       run_script "$SCRIPT_DIR/uninstall_ws_mac.zsh" "${ARGS[@]}" ;;
+      apps)       run_script "$SCRIPT_DIR/uninstall-apps.zsh" "${ARGS[@]}" ;;
+      defaults)   run_script "$SCRIPT_DIR/undo-macos-defaults.zsh" "${ARGS[@]}" ;;
+      vscode)     run_script "$SCRIPT_DIR/vscode-extensions.zsh" --undo "${ARGS[@]}" ;;
+      languages|security)
+        warn "'$MODULE' does not have an uninstaller script."
+        ;;
+      *) err "Unknown module for uninstall: $MODULE"; exit 1 ;;
+    esac
+    ;;
+
+  help) print_main_help ;;
+
+  *)
+    err "Unknown command: $COMMAND"
+    print_main_help
+    exit 1
+    ;;
+esac
+
+exit 0

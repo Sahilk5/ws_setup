@@ -1,0 +1,16 @@
+# Brewfile for GUI apps and cloud CLIs
+# Dev GUI
+cask "docker-desktop"
+cask "postman"
+cask "tableplus"
+cask "utm"
+# Browsers
+cask "arc"
+cask "firefox"
+# Window/Launcher Utilities
+cask "rectangle"
+cask "raycast"
+cask "alt-tab"
+# Cloud CLIs
+brew "awscli"
+brew "gh"
