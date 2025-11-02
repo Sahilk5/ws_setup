@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # =========================
-# tany workspace upgrader (v2.5 FINAL)
+# tany workspace upgrader (v2.8 FINAL)
 # =========================
 
 SCRIPT_DIR="${0:A:h}"
@@ -28,7 +28,7 @@ print_usage_guide() {
   echo "* rg <pat>    : ripgrep (fast grep)"
   echo "* fd <pat>    : find by name"
   echo "* gl          : lazygit UI (alias for 'lazygit')"
-  echo "* tldr <cmd>  : Practical command examples"
+  echo "* tlrc <cmd>  : Practical command examples"
   echo "* z <dir>     : 'zoxide' (jump to frequent dirs)"
   echo "* direnv      : Per-project .envrc loader (now hooked)"
   echo "* git diff    : Now uses 'git-delta' (side-by-side view)"
@@ -44,7 +44,7 @@ print_usage_guide() {
 print_summary() {
   echo ""
   log "This script will idempotently install and configure:"
-  echo "  - Xcode CLT (check), Homebrew & core CLI utils (eza, bat, fzf, btop, rg, fd, tldr)"
+  echo "  - Xcode CLT (check), Homebrew & core CLI utils (eza, bat, fzf, btop, rg, fd, tlrc)"
   echo "  - Zsh, Oh My Zsh, Powerlevel10k (with default config)"
   echo "  - Zsh plugins (autosuggestions, syntax-highlighting)"
   echo "  - Terminal tools (Neovim + plugins, tmux, lazygit)"
@@ -99,7 +99,12 @@ fi
 log "Ensuring packages are installed..."
 run brew tap homebrew/cask-fonts >/dev/null 2>&1 || true
 casks=(iterm2 font-hack-nerd-font)
-formulas=(bat eza fzf btop neovim ripgrep fd lazygit jq tmux tldr zoxide direnv git-delta asdf)
+formulas=(bat eza fzf btop neovim ripgrep fd lazygit jq tmux tlrc zoxide direnv git-delta asdf)
+# Handle tlrc vs tldr conflict gracefully
+if brew list --formula tldr >/dev/null 2>&1; then
+  warn "Found 'tldr' installed; unlinking to allow 'tlrc' install."
+  run brew unlink tldr || true
+fi
 run brew install "${formulas[@]}" || true; run brew install --cask "${casks[@]}" || true
 ok "Homebrew apps and tools ensured."
 if [[ -d "$HOME/.oh-my-zsh" ]]; then ok "Oh My Zsh is already installed."; else
@@ -111,6 +116,9 @@ if [[ -d "$P10K_DIR" ]]; then ok "Powerlevel10k already installed."; else
   log "Installing Powerlevel10k..."; run git_retry clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"
 fi
 replace_or_append '^ZSH_THEME=.*' 'ZSH_THEME="powerlevel10k/powerlevel10k"' "$ZSHRC"
+# Ensure Oh My Zsh is sourced so theme and plugins load
+append_once 'source $ZSH/oh-my-zsh.sh' "$ZSHRC"
+# Ensure Powerlevel10k config is sourced if present
 append_once '[[ -r ~/.p10k.zsh ]] && source ~/.p10k.zsh' "$ZSHRC"
 log "Applying Zsh quality-of-life settings..."
 read -r -d '' ZRC_PAYLOAD <<'EOC' || true
@@ -168,32 +176,57 @@ if ! grep -Eq '^[[:space:]]*plugins=\([^)]*([[:space:]]|^)zsh-syntax-highlightin
     log "Activating zsh-syntax-highlighting in ~/.zshrc..."
     add_zsh_plugin "$ZSHRC_FILE" "zsh-syntax-highlighting"
 else ok "zsh-syntax-highlighting already active in ~/.zshrc."; fi
+# Deduplicate the plugins list just in case older runs added duplicates
+dedup_zsh_plugins "$ZSHRC_FILE"
 rm -f "$ZSHRC_TEMP"; ok "Zsh plugins configured."
-P10K_CFG="$HOME/.p10k.zsh"
-if [[ -f "$P10K_CFG" ]]; then ok "Found existing .p10k.zsh"; else
-  log "Creating default .p10k.zsh (no wizard)..."
-  read -r -d '' P10K_PAYLOAD <<'EOP' || true
-typeset -g POWERLEVEL9K_MODE=nerdfont-complete
-typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=( os_icon dir vcs )
-typeset -g POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=( status command_execution_time time )
-typeset -g POWERLEVEL9K_PROMPT_ADD_NEWLINE=true
-typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=always
-typeset -g POWERLEVEL9K_DIR_SHOW_WRITABLE=true
-typeset -g POWERLEVEL9K_SHORTEN_DIR_LENGTH=1
-typeset -g POWERLEVEL9K_SHORTEN_STRATEGY=truncate_from_right
-typeset -g POWERLEVEL9K_TIME_FORMAT='%D{%H:%M:%S}'
-EOP
-  atomic_write "$P10K_CFG" "$P10K_PAYLOAD"; fi
+# Do not create ~/.p10k.zsh here so the Powerlevel10k wizard prompts on first launch
 log "Ensuring iTerm2 Dynamic Profile..."
 ITERM_DIR="$HOME/Library/Application Support/iTerm2/DynamicProfiles"; ITERM_FILE="$ITERM_DIR/tany.json"
 run mkdir -p "$ITERM_DIR"
-if [[ ! -f "$ITERM_FILE" ]]; then
-  GUID="tany-$(uuid)"
-  read -r -d '' ITERM_PAYLOAD <<EOF || true
+
+# Clean up any duplicate 'tany' profiles from other files in DynamicProfiles
+duplicates_removed=0
+if command -v jq >/dev/null 2>&1; then
+  while IFS= read -r -d '' f; do
+    [[ "$f" == "$ITERM_FILE" ]] && continue
+    if jq -e '.Profiles[]?|select(.Name=="tany")' "$f" >/dev/null 2>&1; then
+      tmpf="$(mktemp)"
+      if jq '(.Profiles // []) | map(select(.Name != "tany")) as $rest | {Profiles:$rest}' "$f" > "$tmpf" 2>/dev/null; then
+        if jq -e '.Profiles|length>0' "$tmpf" >/dev/null 2>&1; then
+          mv "$tmpf" "$f"; duplicates_removed=$((duplicates_removed+1))
+        else
+          rm -f "$tmpf"; rm -f "$f"; duplicates_removed=$((duplicates_removed+1))
+        fi
+      else
+        rm -f "$tmpf" 2>/dev/null || true
+      fi
+    fi
+  done < <(find "$ITERM_DIR" -maxdepth 1 -mindepth 1 -type f -print0)
+else
+  # Fallback: disable any non-target files that appear to define the 'tany' profile
+  while IFS= read -r -d '' f; do
+    [[ "$f" == "$ITERM_FILE" ]] && continue
+    if grep -q '"Name"\s*:\s*"tany"' "$f" 2>/dev/null; then
+      mv "$f" "$f.disabled" 2>/dev/null || true; duplicates_removed=$((duplicates_removed+1))
+    fi
+  done < <(find "$ITERM_DIR" -maxdepth 1 -mindepth 1 -type f -print0)
+fi
+(( duplicates_removed > 0 )) && warn "Removed $duplicates_removed duplicate iTerm2 'tany' profile definitions."
+
+# Maintain a stable GUID across runs so iTerm2 treats this as the same profile
+TANY_CFG_DIR="$HOME/.config/tany"; run mkdir -p "$TANY_CFG_DIR"
+GUID_FILE="$TANY_CFG_DIR/iterm_tany_guid"
+GUID=""
+if [[ -f "$GUID_FILE" ]]; then
+  GUID="$(cat "$GUID_FILE" 2>/dev/null || true)"
+fi
+[[ -n "$GUID" ]] || GUID="tany-$(uuid)"
+echo "$GUID" > "$GUID_FILE"
+
+read -r -d '' ITERM_PAYLOAD <<EOF || true
 { "Profiles": [ { "Name": "tany", "Guid": "$GUID", "Normal Font": "HackNerdFont-Regular 14", "Non-ASCII Font": "HackNerdFont-Regular 14", "Use Non-ASCII Font": true, "Unlimited Scrollback": true, "Natural Text Editing": true, "Silence Bell": true } ] }
 EOF
-  atomic_write "$ITERM_FILE" "$ITERM_PAYLOAD"; ok "Created iTerm2 'tany' dynamic profile."
-else ok "iTerm2 'tany' dynamic profile already exists."; fi
+atomic_write "$ITERM_FILE" "$ITERM_PAYLOAD"; ok "iTerm2 'tany' dynamic profile synced."
 PLUG_VIM="$HOME/.local/share/nvim/site/autoload/plug.vim"
 if [[ -f "$PLUG_VIM" ]]; then ok "vim-plug already installed."; else
   log "Installing vim-plug..."; run_s "$CURL -fLo \"$PLUG_VIM\" --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
@@ -288,7 +321,11 @@ if [[ ! -f "$RG_CFG" ]]; then
 EOR
   atomic_write "$RG_CFG" "$RG_PAYLOAD"; ok "Created ripgrep config."
 else ok "ripgrep config already exists."; fi
-log "Updating tldr cache..."; run tldr --update || true
+if command -v tlrc >/dev/null 2>&1; then
+  log "Updating tlrc cache..."; run tlrc --update || true
+elif command -v tldr >/dev/null 2>&1; then
+  log "Updating tldr cache..."; run tldr --update || true
+fi
 echo ""
 if [[ $DRY_RUN -eq 1 ]]; then warn "Skipping VS Code prompt in --dry-run mode."
 elif ! command -v jq >/dev/null; then

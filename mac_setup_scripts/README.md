@@ -30,7 +30,7 @@ The toolkit provides a layered setup:
     * `btop`: An interactive system monitor, superior to `top` and `htop`.
     * `ripgrep` (`rg`): Extremely fast recursive code search tool (better `grep`).
     * `fd`: Simple and fast alternative to `find`.
-    * `tldr`: Community-driven, practical examples for command-line tools.
+    * `tlrc`: Community-driven, practical examples for command-line tools.
 * **Zsh Environment:**
     * Installs **Oh My Zsh** framework.
     * Installs and configures **Powerlevel10k** for a fast, customizable prompt (skips initial wizard, uses a functional default; run `p10k configure` to customize).

@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # =========================
-# tany workspace helper lib (v1.1 FINAL)
+# tany workspace helper lib (v1.3 FINAL)
 # =========================
 
 # --- Safety & UX ---
@@ -144,15 +144,62 @@ add_zsh_plugin() {
   local tmp; tmp="$(mktemp)"
   awk -v plugin="$plugin" '
     /^[[:space:]]*plugins=\(/ {
-      # Single-line plugins=() case: append before closing paren
-      if (sub(/\)\s*$/, " " plugin ")")) { print; next }
-      in_plugins=1
+      # Handle single-line plugins list safely by stripping trailing )
+      line = $0
+      line_end = line; sub(/\)\s*$/, "", line_end)
+      # If already present, keep as is
+      if (line_end ~ "(^|[[:space:]])" plugin "([[:space:]]|$)") { print; next }
+      # Append before closing paren
+      if (sub(/\)\s*$/, " " plugin ")", line)) { print line; next }
+      in_plugins=1; seen=0
+    }
+    in_plugins {
+      if ($0 ~ "(^|[[:space:]])" plugin "([[:space:]]|$)") { seen=1 }
     }
     in_plugins && /^[[:space:]]*\)/ {
-      # Multiline plugins block: insert before closing paren
-      print "  " plugin
-      in_plugins=0
+      # Multiline plugins block: insert before closing paren if not present
+      if (!seen) { print "  " plugin }
+      in_plugins=0; seen=0
     }
+    { print }
+  ' "$file" > "$tmp" && mv "$tmp" "$file"
+}
+
+# Deduplicate plugin entries inside plugins=(...) in a .zshrc file
+dedup_zsh_plugins() {
+  local file="$1"
+  if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+    print -P "%F{yellow}(dry-run)%f dedup plugins in $file"
+    return 0
+  fi
+  local tmp; tmp="$(mktemp)"
+  awk '
+    function flush(collected,   n,i,tok,seen,out) {
+      # Output a normalized, single-line plugins block with unique entries
+      n=split(collected, arr, /[[:space:]]+/)
+      delete seen
+      out = "plugins=("
+      for (i=1; i<=n; i++) {
+        tok=arr[i]; if (tok=="") continue
+        if (!(tok in seen)) { out = out (out=="plugins=(" ? "" : " ") tok; seen[tok]=1 }
+      }
+      print out ")"
+    }
+    /^[[:space:]]*plugins=\(/ {
+      in_block=1; collected=""
+      # Capture any content after the opening paren on same line
+      line=$0
+      sub(/^[[:space:]]*plugins=\(/, "", line)
+      if (line ~ /\)/) {
+        sub(/\).*/, "", line); collected=collected " " line
+        flush(collected); in_block=0; collected=""; next
+      }
+      # Defer printing; will output a single normalized line at flush
+      if (length(line) > 0) collected=collected " " line
+      next
+    }
+    in_block && /^[[:space:]]*\)/ { flush(collected); in_block=0; collected=""; next }
+    in_block { collected=collected " " $0; next }
     { print }
   ' "$file" > "$tmp" && mv "$tmp" "$file"
 }
@@ -167,6 +214,24 @@ confirm_prompt() {
     [[ "$default_lower" == "y" || "$default_lower" == "yes" ]]
     return
   fi
+
+  # Auto-confirm/decline support via env vars; also handle non-interactive shells
+  local auto_mode="ask"
+  if _tany_truthy "${TANY_ASSUME_NO:-}"; then
+    auto_mode="no"
+  elif _tany_truthy "${TANY_ASSUME_YES:-}"; then
+    auto_mode="yes"
+  fi
+  if [[ "$auto_mode" == "ask" && ! -t 0 ]]; then
+    auto_mode="$default_lower"
+    warn "No interactive terminal detected; defaulting to '$default_lower' for prompt: $prompt"
+  fi
+  case "$auto_mode" in
+    yes|y|true|1|on)
+      log "Auto-confirmed prompt: $prompt"; return 0 ;;
+    no|n|false|0|off)
+      log "Auto-declined prompt: $prompt"; return 1 ;;
+  esac
 
   local suffix="[y/N]"
   if [[ "$default_lower" == "y" || "$default_lower" == "yes" ]]; then
@@ -194,9 +259,12 @@ backup_then_rm() {
       print -P "%F{yellow}(dry-run)%f would backup and remove $path"
       return 0
     fi
-    local bak="${path}.bak.$(date +%Y%m%d-%H%M%S)"
+    # Use absolute paths to avoid PATH issues
+    local bak_date
+    bak_date=$(/bin/date +%Y%m%d-%H%M%S 2>/dev/null || date +%Y%m%d-%H%M%S)
+    local bak="${path}.bak.${bak_date}"
     log "Backing up $path to $bak..."
-    mv "$path" "$bak"
+    /bin/mv "$path" "$bak" 2>/dev/null || mv "$path" "$bak"
     ok "Backed up $path. Old version is at $bak."
   fi
 }
@@ -211,6 +279,14 @@ atomic_write() {
   tmp="$(mktemp)"
   printf "%s\n" "$payload" > "$tmp"
   mv "$tmp" "$dest"
+}
+
+# Helper for confirm_prompt truthy envs
+_tany_truthy() {
+  case "$1" in
+    1|y|Y|yes|YES|true|TRUE|on|ON) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 # --- Network Resiliency ---
@@ -239,7 +315,12 @@ run() {
   if [[ $DRY_RUN -eq 1 ]]; then
     print -P "%F{yellow}(dry-run)%f $*"
   else
-    command "$@" # Use command to run real executables safely
+    # Allow calling shell functions (e.g., git_retry) via run
+    if typeset -f -- "$1" >/dev/null 2>&1; then
+      "$@"
+    else
+      command "$@" # Prefer real executables for non-functions
+    fi
   fi
 }
 

@@ -1,14 +1,14 @@
 #!/bin/zsh
 
 # =========================
-# tany workspace uninstaller (v1.2 FINAL)
+# tany workspace uninstaller (v1.3 FINAL)
 # =========================
 
 SCRIPT_DIR="${0:A:h}"
 source "$SCRIPT_DIR/lib_tany.sh"
 require_macos
 
-LOGFILE="${HOME}/.tany-uninstall-$(date +%Y%m%d).log"
+LOGFILE="${HOME}/.tany-uninstall-$(/bin/date +%Y%m%d 2>/dev/null || date +%Y%m%d).log"
 exec > >(tee -a "$LOGFILE") 2>&1
 
 DRY_RUN=0
@@ -34,7 +34,7 @@ fi
 log "Full log will be saved to $LOGFILE"
 
 log "Uninstalling Homebrew packages..."
-formulas=(bat eza fzf btop neovim ripgrep fd lazygit jq tmux tldr zoxide direnv git-delta asdf)
+formulas=(bat eza fzf btop neovim ripgrep fd lazygit jq tmux tlrc zoxide direnv git-delta asdf)
 casks=(iterm2 font-hack-nerd-font)
 run brew uninstall "${formulas[@]}" || true
 run brew uninstall --cask "${casks[@]}" || true
@@ -43,7 +43,8 @@ ok "Packages uninstalled."
 log "Removing config files (backups will be created)..."
 backup_then_rm "$HOME/.tmux.conf"; backup_then_rm "$HOME/.p10k.zsh"
 backup_then_rm "$HOME/.config/nvim"; backup_then_rm "$HOME/.config/ripgrep"
-backup_then_rm "$HOME/Library/Application Support/iTerm2/DynamicProfiles/tany.json"
+# Remove iTerm2 dynamic profile outright to avoid lingering duplicates
+run rm -f "$HOME/Library/Application Support/iTerm2/DynamicProfiles/tany.json" || true
 ok "Config files removed."
 
 log "Uninstalling Oh My Zsh..."
@@ -57,6 +58,7 @@ log "Cleaning shell configs..."
 if [[ -f "$ZSHRC" ]]; then
   run_s "perl -0777 -i -pe \"s/\\n?$ZSH_BLOCK_BEGIN.*?$ZSH_BLOCK_END\\n?//s\" \"$ZSHRC\""
   run_s "perl -i -pe 's/^ZSH_THEME=\"powerlevel10k\/powerlevel10k\"\\n?//g' \"$ZSHRC\" 2>/dev/null || true"
+  run_s "perl -i -pe 's/^source \\\$ZSH\/oh-my-zsh\.sh\\n?//g' \"$ZSHRC\" 2>/dev/null || true"
   ok "~/.zshrc cleaned."
 fi
 if [[ -f "$ZPROFILE" ]]; then
