@@ -180,6 +180,8 @@ append_once '[[ -r ~/.p10k.zsh ]] && source ~/.p10k.zsh' "$ZSHRC"
 
 log "Applying Zsh quality-of-life settings..."
 read -r -d '' ZRC_PAYLOAD <<'EOC' || true
+# --- PATH Setup ---
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 # --- Zsh History Settings ---
 HISTSIZE=500000
 SAVEHIST=500000
@@ -197,8 +199,8 @@ if [[ -z "${TANY_DISABLE_ALIASES:-}" ]]; then
   alias please="sudo !!"; alias grep="grep --color=auto"
 fi
 # --- Tool Hooks ---
-eval "$(zoxide init zsh)"
-eval "$(direnv hook zsh)"
+eval "$(zoxide init zsh)" 2>/dev/null || true
+eval "$(direnv hook zsh)" 2>/dev/null || true
 if [ -f "$HOME/.asdf/asdf.sh" ]; then
   . "$HOME/.asdf/asdf.sh"
 fi
