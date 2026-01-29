@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # =========================
 # Language Runtime Installer (v1.3 UBUNTU)

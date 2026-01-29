@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # =========================
 # tany workspace helper lib (v1.3 UBUNTU)

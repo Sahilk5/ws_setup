@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # =========================
 # tany workspace upgrader (v2.8 UBUNTU)

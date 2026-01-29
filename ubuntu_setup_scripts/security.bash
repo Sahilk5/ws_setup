@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # =========================
 # Security & Identity Setup (v1.3 UBUNTU)

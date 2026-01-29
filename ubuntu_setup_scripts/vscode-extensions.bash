@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # =========================
 # VS Code Extensions Installer (v1.3 UBUNTU)
