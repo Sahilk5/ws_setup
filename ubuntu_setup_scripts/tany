@@ -1,0 +1,141 @@
+#!/bin/bash
+
+# =========================
+# tany workspace manager (v1.3 UBUNTU)
+# Main wrapper script
+# =========================
+
+set -e -u -o pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [[ ! -f "$SCRIPT_DIR/lib_tany.sh" ]]; then
+  echo "❌ Error: Helper library lib_tany.sh not found in $SCRIPT_DIR"
+  exit 1
+fi
+source "$SCRIPT_DIR/lib_tany.sh"
+
+# --- Constants ---
+SCRIPTS=(
+  "setup_ws_ubuntu.bash"
+  "uninstall_ws_ubuntu.bash"
+  "apps.bash"
+  "uninstall-apps.bash"
+  "dev-languages.bash"
+  "security.bash"
+  "vscode-extensions.bash"
+)
+MODULES=(base apps languages security vscode all)
+
+# --- Argument Parsing ---
+COMMAND=""
+MODULE=""
+DRY_RUN=0
+ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    install|uninstall|help)
+      COMMAND="$1"; shift ;;
+    --dry-run)
+      DRY_RUN=1; ARGS+=("--dry-run"); shift ;;
+    *)
+      if [[ -z "$MODULE" ]]; then
+        found=0
+        for m in "${MODULES[@]}"; do
+          if [[ "$1" == "$m" ]]; then found=1; MODULE="$1"; break; fi
+        done
+        if [[ "$1" == "security" ]]; then
+           found=1; MODULE="$1"
+        fi
+        if [[ $found -eq 0 ]]; then
+          err "Unknown module: $1"
+          err "Valid modules are: ${MODULES[*]}"
+          exit 1
+        fi
+      else
+        ARGS+=("$1")
+      fi
+      shift ;;
+  esac
+done
+
+BASH_BIN="${BASH_BIN:-$(command -v bash || true)}"
+[[ -n "$BASH_BIN" && -x "$BASH_BIN" ]] || BASH_BIN="/bin/bash"
+if [[ ! -x "$BASH_BIN" ]]; then
+  err "Unable to locate an executable 'bash'. Set BASH_BIN to override."
+  exit 1
+fi
+
+# --- Help ---
+print_main_help() {
+  echo ""
+  log "🚀 tany Workspace Manager (Ubuntu Edition)"
+  echo ""
+  echo "Usage: $0 <command> <module> [options]"
+  echo ""
+  echo "Commands:"
+  echo "  install       - Install module(s)"
+  echo "  uninstall     - Uninstall module(s)"
+  echo "  help          - Show this help"
+  echo ""
+  echo "Modules:"
+  echo "  base          - Core tools & shell (eza, bat, fzf, nvim, tmux, etc.)"
+  echo "  apps          - GUI applications (Docker, Postman, etc.)"
+  echo "  languages     - Language runtimes (Node, Python, Go, Java via asdf)"
+  echo "  security      - Interactive Git & SSH setup"
+  echo "  vscode        - VS Code extensions"
+  echo "  all           - Install all modules"
+  echo ""
+  echo "Options:"
+  echo "  --dry-run     - Preview changes without applying them"
+  echo ""
+  echo "Examples:"
+  echo "  $0 install base"
+  echo "  $0 install all --dry-run"
+  echo "  $0 uninstall vscode"
+  echo ""
+}
+
+# --- Execution ---
+if [[ -z "$COMMAND" ]]; then
+  print_main_help; exit 0
+fi
+
+if [[ "$COMMAND" == "help" ]]; then
+  print_main_help; exit 0
+fi
+
+if [[ -z "$MODULE" ]]; then
+  err "Module required for '$COMMAND' command"
+  print_main_help; exit 1
+fi
+
+# Route command to script
+case "$COMMAND:$MODULE" in
+  install:base)
+    exec "$BASH_BIN" "$SCRIPT_DIR/setup_ws_ubuntu.bash" "${ARGS[@]}" ;;
+  uninstall:base)
+    exec "$BASH_BIN" "$SCRIPT_DIR/uninstall_ws_ubuntu.bash" "${ARGS[@]}" ;;
+  install:apps)
+    exec "$BASH_BIN" "$SCRIPT_DIR/apps.bash" "${ARGS[@]}" ;;
+  uninstall:apps)
+    exec "$BASH_BIN" "$SCRIPT_DIR/uninstall-apps.bash" "${ARGS[@]}" ;;
+  install:languages)
+    exec "$BASH_BIN" "$SCRIPT_DIR/dev-languages.bash" "${ARGS[@]}" ;;
+  install:security)
+    exec "$BASH_BIN" "$SCRIPT_DIR/security.bash" "${ARGS[@]}" ;;
+  install:vscode)
+    exec "$BASH_BIN" "$SCRIPT_DIR/vscode-extensions.bash" "${ARGS[@]}" ;;
+  install:all)
+    for mod in base apps languages vscode; do
+      log "Installing $mod..."
+      "$BASH_BIN" "$SCRIPT_DIR/tany" install "$mod" "${ARGS[@]}" || warn "Module $mod installation had issues"
+    done
+    log "Installing security (interactive)..."
+    "$BASH_BIN" "$SCRIPT_DIR/tany" install security "${ARGS[@]}" || true
+    ;;
+  *)
+    err "Unhandled command: $COMMAND:$MODULE"
+    exit 1 ;;
+esac
