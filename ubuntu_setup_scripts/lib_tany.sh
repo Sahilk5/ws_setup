@@ -21,9 +21,12 @@ err()  { echo -e "\033[31mâœ—\033[0m  $*"; }
 
 # --- System Checks ---
 require_ubuntu() {
-  if ! grep -qi "ubuntu\|debian" /etc/os-release 2>/dev/null; then
-    err "This script is Ubuntu/Debian-only."
-    exit 1
+  # Check for apt-get or dpkg to detect Debian-based systems (includes WSL)
+  if ! command -v apt-get >/dev/null 2>&1 && ! command -v dpkg >/dev/null 2>&1; then
+    if ! grep -qi "ubuntu\|debian\|wsl" /etc/os-release 2>/dev/null && [[ ! -f /proc/version ]] || ! grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
+      err "This script requires Ubuntu/Debian/WSL."
+      exit 1
+    fi
   fi
 }
 
