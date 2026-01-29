@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # =========================
 # Language Runtime Installer (v1.3 UBUNTU)
@@ -33,7 +33,7 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || "${1:-}" == "--summary" ]]; th
   print_summary; exit 0
 fi
 
-log "🚀 Installing language runtimes via asdf..."
+log "ðŸš€ Installing language runtimes via asdf..."
 [[ $DRY_RUN -eq 1 ]] && warn "DRY RUN MODE: No changes will be made."
 print_summary
 log "Full log will be saved to $LOGFILE"
@@ -98,5 +98,5 @@ if [[ $SET_GLOBALS -eq 1 ]]; then
 fi
 
 echo ""
-echo "🎉 --- Language Runtimes Installed! --- 🎉"
+echo "ðŸŽ‰ --- Language Runtimes Installed! --- ðŸŽ‰"
 log "Relaunch your shell to use the new global versions."

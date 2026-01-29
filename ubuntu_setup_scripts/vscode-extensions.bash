@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # =========================
 # VS Code Extensions Installer (v1.3 UBUNTU)
@@ -43,7 +43,7 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || "${1:-}" == "--summary" ]]; th
 fi
 
 if [[ "${1:-}" == "--undo" ]]; then
-  log "🗑️  Uninstalling VS Code extensions..."
+  log "ðŸ—‘ï¸  Uninstalling VS Code extensions..."
   [[ $DRY_RUN -eq 1 ]] && warn "DRY RUN MODE: No changes will be made."
   print_summary
   for ext in "${EXTENSIONS[@]}"; do
@@ -53,7 +53,7 @@ if [[ "${1:-}" == "--undo" ]]; then
   exit 0
 fi
 
-log "🚀 Installing VS Code extensions..."
+log "ðŸš€ Installing VS Code extensions..."
 [[ $DRY_RUN -eq 1 ]] && warn "DRY RUN MODE: No changes will be made."
 print_summary
 log "Full log will be saved to $LOGFILE"

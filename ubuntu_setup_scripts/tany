@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # =========================
 # tany workspace manager (v1.3 UBUNTU)
@@ -10,7 +10,7 @@ set -e -u -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ ! -f "$SCRIPT_DIR/lib_tany.sh" ]]; then
-  echo "❌ Error: Helper library lib_tany.sh not found in $SCRIPT_DIR"
+  echo "âŒ Error: Helper library lib_tany.sh not found in $SCRIPT_DIR"
   exit 1
 fi
 source "$SCRIPT_DIR/lib_tany.sh"
@@ -70,7 +70,7 @@ fi
 # --- Help ---
 print_main_help() {
   echo ""
-  log "🚀 tany Workspace Manager (Ubuntu Edition)"
+  log "ðŸš€ tany Workspace Manager (Ubuntu Edition)"
   echo ""
   echo "Usage: $0 <command> <module> [options]"
   echo ""

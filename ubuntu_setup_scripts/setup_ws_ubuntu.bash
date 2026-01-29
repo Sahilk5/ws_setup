@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # =========================
 # tany workspace upgrader (v2.8 UBUNTU)
@@ -16,7 +16,7 @@ DRY_RUN=0
 
 print_usage_guide() {
   echo ""
-  echo "✨ --- Quick Usage Guide --- ✨"
+  echo "âœ¨ --- Quick Usage Guide --- âœ¨"
   echo "* bat <file>  : Pretty 'cat'"
   echo "* eza         : Pretty 'ls' (try new aliases below)"
   echo "* l           : 'eza -l --git --icons' (Detailed list)"
@@ -64,7 +64,7 @@ if [[ "${1:-}" == "--undo" ]]; then
   err "This script does not handle uninstallation."; warn "Run 'uninstall_ws_ubuntu.bash' to undo."; exit 1
 fi
 
-log "🚀 Starting your full 'tany' workspace upgrade..."
+log "ðŸš€ Starting your full 'tany' workspace upgrade..."
 [[ $DRY_RUN -eq 1 ]] && warn "DRY RUN MODE: No changes will be made."
 print_summary; echo "You may be prompted for your password."; log "Full log will be saved to $LOGFILE"
 
@@ -73,7 +73,7 @@ ZSH_BLOCK_BEGIN="# >>> tany-setup BEGIN >>>"
 ZSH_BLOCK_END="# <<< tany-setup END <<<"
 
 log "Running preflight checks..."
-run_s 'nc -z github.com 443 >/dev/null 2>&1 || echo "⚠️ Network to github.com:443 may be blocked…"'
+run_s 'nc -z github.com 443 >/dev/null 2>&1 || echo "âš ï¸ Network to github.com:443 may be blockedâ€¦"'
 run df -h "$HOME" | tail -1
 echo ""
 
@@ -336,7 +336,7 @@ fi
 echo ""
 print_usage_guide
 echo ""
-echo "🎉 --- FULL WORKSPACE AUTOMATION COMPLETE! --- 🎉"
+echo "ðŸŽ‰ --- FULL WORKSPACE AUTOMATION COMPLETE! --- ðŸŽ‰"
 echo ""
 echo "Your shell, tmux, and Neovim are now configured."
 echo "Consider running: chsh -s /bin/zsh (if not already done)"

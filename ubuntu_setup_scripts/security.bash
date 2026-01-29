@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # =========================
 # Security & Identity Setup (v1.3 UBUNTU)
@@ -24,7 +24,7 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || "${1:-}" == "--summary" ]]; th
   print_summary; exit 0
 fi
 
-log "🚀 Starting interactive security setup..."
+log "ðŸš€ Starting interactive security setup..."
 print_summary
 log "Full log will be saved to $LOGFILE"
 

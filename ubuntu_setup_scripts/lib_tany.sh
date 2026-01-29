@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # =========================
 # tany workspace helper lib (v1.3 UBUNTU)
@@ -11,13 +11,13 @@ set -e -u -o pipefail
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 # Error trap
-trap 'echo "❌ Error on line $LINENO in $0"; exit 1' ERR
+trap 'echo "âŒ Error on line $LINENO in $0"; exit 1' ERR
 
 # --- Logging ---
 log()  { echo -e "\033[36m==>\033[0m $*"; }
-ok()   { echo -e "\033[32m✓\033[0m  $*"; }
+ok()   { echo -e "\033[32mâœ“\033[0m  $*"; }
 warn() { echo -e "\033[33m!\033[0m  $*"; }
-err()  { echo -e "\033[31m✗\033[0m  $*"; }
+err()  { echo -e "\033[31mâœ—\033[0m  $*"; }
 
 # --- System Checks ---
 require_ubuntu() {
@@ -49,7 +49,7 @@ append_once() {
 replace_or_append() {
   local regex="$1" repl="$2" file="$3"
   if [[ ${DRY_RUN:-0} -eq 1 ]]; then
-    echo -e "\033[33m(dry-run)\033[0m replace_or_append '$regex' → '$repl' in $file"
+    echo -e "\033[33m(dry-run)\033[0m replace_or_append '$regex' â†’ '$repl' in $file"
     return 0
   fi
   [[ -f "$file" ]] || : > "$file"

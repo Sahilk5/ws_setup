@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # =========================
 # GUI Apps Installer (v1.3 UBUNTU)
@@ -36,7 +36,7 @@ if [[ "${1:-}" == "--undo" ]]; then
   exit 0
 fi
 
-log "🚀 Installing GUI apps & CLIs..."
+log "ðŸš€ Installing GUI apps & CLIs..."
 [[ $DRY_RUN -eq 1 ]] && warn "DRY RUN MODE: No changes will be made."
 print_summary
 log "Full log will be saved to $LOGFILE"

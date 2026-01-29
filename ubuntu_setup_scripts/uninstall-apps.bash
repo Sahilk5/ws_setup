@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # =========================
 # GUI Apps Uninstaller (v1.3 UBUNTU)
