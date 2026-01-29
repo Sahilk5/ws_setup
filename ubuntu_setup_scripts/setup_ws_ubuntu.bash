@@ -199,8 +199,8 @@ if [[ -z "${TANY_DISABLE_ALIASES:-}" ]]; then
   alias please="sudo !!"; alias grep="grep --color=auto"
 fi
 # --- Tool Hooks ---
-eval "$(zoxide init zsh)" 2>/dev/null || true
-eval "$(direnv hook zsh)" 2>/dev/null || true
+eval "$(zoxide init zsh 2>/dev/null)" || true
+eval "$(direnv hook zsh 2>/dev/null)" || true
 if [ -f "$HOME/.asdf/asdf.sh" ]; then
   . "$HOME/.asdf/asdf.sh"
 fi
