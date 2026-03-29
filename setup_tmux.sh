@@ -6,6 +6,9 @@ sudo apt install -y tmux
 tmux_conf_file=~/.tmux.conf
 
 cat > $tmux_conf_file <<EOF
+# set to open default shell
+set -g default-shell /bin/zsh
+
 # split panes using | and -
 bind | split-window -h
 bind - split-window -v
